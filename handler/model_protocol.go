@@ -361,6 +361,37 @@ var builtinAIProtocols = []aiProtocolAdapter{
 	},
 	{id: service.ModelChannelProtocol88API},
 	{
+		id: service.ModelChannelProtocolLKMedia,
+		path: func(channel model.ModelChannel, _ string, path string) (string, bool) {
+			if !service.IsLKMediaChannel(channel) {
+				return path, false
+			}
+			if path == "/videos" {
+				return "/media/generate", true
+			}
+			if strings.HasPrefix(path, "/videos/") && !strings.HasSuffix(path, "/content") {
+				taskID := strings.TrimSpace(strings.TrimPrefix(path, "/videos/"))
+				if taskID != "" && !strings.Contains(taskID, "/") {
+					return "/media/status?task_id=" + url.QueryEscape(taskID), true
+				}
+			}
+			return path, true
+		},
+		prepare: prepareLKMediaVideoRequest,
+		videoResponse: func(payload []byte, request *http.Request, channel model.ModelChannel, _ string, status bool) ([]byte, bool) {
+			if !service.IsLKMediaChannel(channel) {
+				return nil, false
+			}
+			if status && strings.Contains(request.URL.Path, "/media/status") {
+				return transformLKMediaVideoStatusResponse(payload)
+			}
+			if !status && strings.Contains(request.URL.Path, "/media/generate") {
+				return transformLKMediaVideoCreateResponse(payload)
+			}
+			return nil, false
+		},
+	},
+	{
 		id:   service.ModelChannelProtocolOpenAI,
 		path: func(_ model.ModelChannel, _ string, path string) (string, bool) { return path, true },
 	},

@@ -556,6 +556,7 @@ export function normalizeLocalChannels(config: Partial<AiConfig>): LocalModelCha
 
 export function channelIdForActiveModel(config: AiConfig) {
     const channels = config.channelMode === "remote" ? config.publicChannels : normalizeLocalChannels(config);
+    const exists = (id: string) => channels.some((channel) => channel.id === id);
     const selectedChannelId = config.model === config.imageModel ? config.imageChannelId : config.model === config.videoModel ? config.videoChannelId : config.model === config.audioModel ? config.audioChannelId : config.model === config.textModel ? config.textChannelId : "";
     const selectedChannel = channels.find((channel) => channel.id === selectedChannelId);
     if (selectedChannel?.protocol === "gemini" || selectedChannel?.protocol === "autodl") return selectedChannelId;
@@ -563,15 +564,16 @@ export function channelIdForActiveModel(config: AiConfig) {
         const geminiChannel = channels.find((channel) => channel.protocol === "gemini" && (channel.models || []).includes(config.model));
         if (geminiChannel) return geminiChannel.id || "";
     }
-    if (modelMatchesCapability(config.model, "image") && config.imageChannelId) return config.imageChannelId;
-    if (modelMatchesCapability(config.model, "video") && config.videoChannelId) return config.videoChannelId;
-    if (modelMatchesCapability(config.model, "audio") && config.audioChannelId) return config.audioChannelId;
-    if (modelMatchesCapability(config.model, "text") && config.textChannelId) return config.textChannelId;
-    if (config.activeChannelId) return config.activeChannelId;
-    if (config.model === config.videoModel) return config.videoChannelId;
-    if (config.model === config.textModel) return config.textChannelId;
-    if (config.model === config.audioModel) return config.audioChannelId;
-    return config.imageChannelId;
+    // 渠道可能被删除，失效的渠道 ID 不再下发，让后端按模型自动选择渠道
+    if (modelMatchesCapability(config.model, "image") && exists(config.imageChannelId)) return config.imageChannelId;
+    if (modelMatchesCapability(config.model, "video") && exists(config.videoChannelId)) return config.videoChannelId;
+    if (modelMatchesCapability(config.model, "audio") && exists(config.audioChannelId)) return config.audioChannelId;
+    if (modelMatchesCapability(config.model, "text") && exists(config.textChannelId)) return config.textChannelId;
+    if (exists(config.activeChannelId)) return config.activeChannelId;
+    if (config.model === config.videoModel && exists(config.videoChannelId)) return config.videoChannelId;
+    if (config.model === config.textModel && exists(config.textChannelId)) return config.textChannelId;
+    if (config.model === config.audioModel && exists(config.audioChannelId)) return config.audioChannelId;
+    return exists(config.imageChannelId) ? config.imageChannelId : "";
 }
 
 export function localChannelForActiveModel(config: AiConfig) {

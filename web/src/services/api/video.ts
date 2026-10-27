@@ -57,6 +57,9 @@ function aiVideoPollUrl(config: AiConfig, model: string, id: string) {
     if (!usesAccountProxy(config) && isCogVideoX3Model(model)) {
         return aiApiUrl(config, `/async-result/${encodeURIComponent(id)}`);
     }
+    if (!usesAccountProxy(config) && videoChannelProtocol(config, model) === "lkmedia") {
+        return aiApiUrl(config, `/media/status?task_id=${encodeURIComponent(id)}`);
+    }
     if (!isAgnesVideoModel(model) || !id.startsWith("video_")) {
         return aiApiUrl(config, `/videos/${encodeURIComponent(id)}`);
     }
@@ -122,7 +125,7 @@ export async function createVideoGenerationTask(config: AiConfig, prompt: string
             ? geminiActionUrl(channel?.baseUrl || config.baseUrl, model, "predictLongRunning")
             : !accountProxy && isMiniMaxH3Config(config, model)
                 ? miniMaxApiUrl(config, "/v2/video_generation")
-                : aiApiUrl(config, !accountProxy && (isGrok2APIVideoConfig(config, model) || isCogVideoX3Model(model)) ? "/videos/generations" : "/videos");
+                : aiApiUrl(config, !accountProxy && (isGrok2APIVideoConfig(config, model) || isCogVideoX3Model(model)) ? "/videos/generations" : !accountProxy && videoChannelProtocol(config, model) === "lkmedia" ? "/media/generate" : "/videos");
         const requestBody = !accountProxy && isGeminiConfig(config, model) ? withoutVideoModel(body) : body;
         const created = directProvider
             ? await (await import("@/services/api/direct-ai")).createDirectVideoTask(config, directProvider, body)
@@ -341,6 +344,7 @@ async function createVideoRequestBody(config: AiConfig, model: string, prompt: s
     }
     if (videoChannelProtocol(config, model) === "88api") return create88APIVideoRequestBody(config, model, prompt, input);
     if (videoChannelProtocol(config, model) === "ark") return createArkSeedanceVideoRequestBody(config, model, prompt, input);
+    if (videoChannelProtocol(config, model) === "lkmedia") return createLKMediaVideoRequestBody(config, model, prompt, input);
     const size = normalizeVideoSize(config.size);
     if (isGeminiVideoModel(model) && isGeminiConfig(config, model)) return createGeminiVeoRequestBody(config, model, prompt, input);
     if (isGrok2APIVideoConfig(config, model)) return createGrok2APIVideoRequestBody(config, model, prompt, input);
@@ -426,6 +430,48 @@ async function createVideoRequestBody(config: AiConfig, model: string, prompt: s
     const audioFiles = kling ? [] : await Promise.all(input.audioReferences.map(mediaReferenceToFormValue));
     audioFiles.forEach((file) => body.append("audio_reference[]", file));
     return body;
+}
+
+async function createLKMediaVideoRequestBody(config: AiConfig, model: string, prompt: string, input: Required<VideoReferenceInput>) {
+    const params: Record<string, unknown> = {
+        duration: lkMediaDuration(config.videoSeconds),
+        resolution: lkMediaResolution(model, config.vquality),
+    };
+    const ratio = normalizeSeedanceRatio(config.size);
+    if (ratio !== "adaptive") params.aspect_ratio = ratio;
+    const hasFrames = Boolean(input.firstFrame || input.lastFrame);
+    const hasReferences = Boolean(input.references.length || input.videoReferences.length || input.audioReferences.length);
+    if (hasFrames) {
+        params.mode = "shouweizhen";
+        params.images = await Promise.all([input.firstFrame, input.lastFrame].filter(Boolean).map((frame) => imageToAgnesReference(frame as ReferenceImage)));
+    } else if (hasReferences) {
+        params.mode = "cankaosheng";
+        if (input.references.length) params.image_url = await Promise.all(input.references.slice(0, 9).map(imageToAgnesReference));
+        const videoUrls = input.videoReferences.slice(0, 3).map((item) => publicHttpUrl(item.url)).filter(Boolean);
+        if (videoUrls.length) params.video_url = videoUrls;
+        const audioUrls = input.audioReferences.slice(0, 3).map((item) => publicHttpUrl(item.url)).filter(Boolean);
+        if (audioUrls.length) params.audio_url = audioUrls;
+    }
+    return { model, prompt, params };
+}
+
+function lkMediaDuration(value: string) {
+    return String(Math.max(4, Math.min(15, Math.floor(Number(value) || 4))));
+}
+
+function lkMediaResolution(model: string, value: string) {
+    const token = String(value || "").trim().toLowerCase().replace(/p$/, "");
+    const minimax = model.toLowerCase().includes("minimax");
+    if (minimax) {
+        if (token === "1080") return "1080P";
+        if (token === "2k") return "2K";
+        if (token === "4k") return "4K";
+        return "768P";
+    }
+    if (token === "480") return "480p";
+    if (token === "1080") return "1080p";
+    if (token === "4k") return "4K";
+    return "720p";
 }
 
 async function createArkSeedanceVideoRequestBody(config: AiConfig, model: string, prompt: string, input: Required<VideoReferenceInput>) {
@@ -796,7 +842,39 @@ function unwrapVideoResponse(payload: ApiVideoResponse): VideoResponse {
     return normalizeVideoResponse(payload);
 }
 
+function unwrapLKMediaVideoResponse(payload: ApiVideoResponse): VideoResponse {
+    const root = payload as unknown as Record<string, unknown>;
+    if (root && typeof root.code === "number") {
+        if (root.code !== 0 && root.code !== 200) throw new VideoRequestError(firstString(root.msg, root.message) || "视频任务请求失败", payload);
+        const data = root.data && typeof root.data === "object" && !Array.isArray(root.data) ? root.data as Record<string, unknown> : null;
+        if (!data) throw new VideoRequestError("接口没有返回视频任务", payload);
+        if (root.code === 0) return normalizeVideoResponse(data);
+        const taskID = firstString(data.task_id, data.taskId);
+        if (!taskID) throw new VideoRequestError(firstString(root.msg, root.message) || "视频接口没有返回任务 ID", payload);
+        return normalizeVideoResponse({ id: taskID, task_id: taskID, status: "queued" });
+    }
+    const state = firstString(root?.state);
+    if (state) {
+        const statusMap: Record<string, string> = { pending: "queued", queued: "queued", processing: "processing", running: "processing", success: "completed", completed: "completed", failed: "failed", fail: "failed", error: "failed", cancelled: "failed", canceled: "failed" };
+        let status = statusMap[state.toLowerCase()] || "processing";
+        const resultUrls = Array.isArray(root.result_urls) ? root.result_urls.filter((item): item is string => typeof item === "string" && !!item) : [];
+        const videoUrl = firstString(root.result_url, ...resultUrls);
+        const errorMessage = firstString(root.error);
+        if (errorMessage && status !== "completed") status = "failed";
+        if (status === "completed" && !videoUrl) status = "processing";
+        return normalizeVideoResponse({
+            task_id: firstString(root.task_id) || undefined,
+            status,
+            progress: typeof root.progress === "string" ? Number(root.progress) || 0 : root.progress,
+            ...(videoUrl ? { video_url: videoUrl } : {}),
+            ...(errorMessage ? { error: { message: errorMessage } } : {}),
+        });
+    }
+    return unwrapVideoResponse(payload);
+}
+
 function unwrapVideoResponseForConfig(config: AiConfig, model: string, payload: ApiVideoResponse) {
+    if (videoChannelProtocol(config, model) === "lkmedia") return unwrapLKMediaVideoResponse(payload);
     if (isGeminiVideoModel(model) && isGeminiConfig(config, model)) return normalizeGeminiVideoResponse(payload);
     if (isMiniMaxH3Config(config, model)) {
         const root = payload as unknown as Record<string, unknown>;

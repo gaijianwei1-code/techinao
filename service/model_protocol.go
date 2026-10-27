@@ -31,7 +31,7 @@ type modelProtocolRule struct {
 }
 
 var modelProtocolRegistry map[string]modelProtocolAdapter
-var modelProtocolIDs = []string{ModelChannelProtocolOpenAI, ModelChannelProtocolGemini, ModelChannelProtocolGrok2API, ModelChannelProtocolMiniMax, ModelChannelProtocolAPIMart, ModelChannelProtocolKIE, ModelChannelProtocolMiMo, ModelChannelProtocol88API, ModelChannelProtocolAutoDL, ModelChannelProtocolArk}
+var modelProtocolIDs = []string{ModelChannelProtocolOpenAI, ModelChannelProtocolGemini, ModelChannelProtocolGrok2API, ModelChannelProtocolMiniMax, ModelChannelProtocolAPIMart, ModelChannelProtocolKIE, ModelChannelProtocolMiMo, ModelChannelProtocol88API, ModelChannelProtocolAutoDL, ModelChannelProtocolArk, ModelChannelProtocolLKMedia}
 
 func init() {
 	compatible := modelProtocolAdapter{
@@ -112,6 +112,9 @@ func init() {
 	ark := compatible
 	ark.testModel = testArkSeedanceChannelModel
 	modelProtocolRegistry[ModelChannelProtocolArk] = ark
+	lkmedia := compatible
+	lkmedia.testModel = testLKMediaChannelModel
+	modelProtocolRegistry[ModelChannelProtocolLKMedia] = lkmedia
 	glm := compatible
 	glm.testModel = testGLMTTSChannelModel
 	modelProtocolRegistry["model:glm-tts"] = glm
@@ -134,6 +137,7 @@ var modelConfigTestRules = []modelProtocolRule{
 		return strings.EqualFold(strings.TrimSpace(channel.Protocol), ModelChannelProtocol88API)
 	}},
 	{ModelChannelProtocolArk, func(channel model.ModelChannel, _ string) bool { return IsArkChannel(channel) }},
+	{ModelChannelProtocolLKMedia, func(channel model.ModelChannel, _ string) bool { return IsLKMediaChannel(channel) }},
 }
 
 var modelGenerationTestRules = []modelProtocolRule{

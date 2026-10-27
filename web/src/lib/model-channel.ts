@@ -8,6 +8,7 @@ export const modelChannelProtocols = [
     { value: "kie", label: "KIE", baseUrl: "https://api.kie.ai/api/v1", directRequestPlan: true },
     { value: "autodl", label: "AutoDL", baseUrl: "https://autodl.art", directRequestPlan: true },
     { value: "ark", label: "火山方舟", baseUrl: "https://ark.cn-beijing.volces.com/api/v3", directRequestPlan: true },
+    { value: "lkmedia", label: "LK888 媒体", baseUrl: "https://api.lk888.ai/v1" },
     { value: "mimo", label: "MiMo", baseUrl: "https://api.xiaomimimo.com", apiKeyUrl: "https://platform.xiaomimimo.com" },
 ] as const;
 
