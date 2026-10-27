@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Cpu } from "lucide-react";
 
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
@@ -41,8 +41,15 @@ export function ModelPicker({ config, value, channelId, capability, onChange, cl
     const current = value || "";
     const currentValue = current && currentOption ? currentOption.key : "";
 
+    // 同一目标渠道只自动同步一次：父组件若不回写 channelId（如画布节点面板只取 model），
+    // 该 effect 会随每轮渲染的 onChange 新引用反复触发并写入节点数据，造成 #185 死循环。
+    const lastSyncedChannelRef = useRef<string | undefined>(undefined);
     useEffect(() => {
-        if (value && currentOption?.channelId && channelId !== currentOption.channelId) onChange(value, currentOption.channelId);
+        const targetChannelId = currentOption?.channelId;
+        if (value && targetChannelId && channelId !== targetChannelId && lastSyncedChannelRef.current !== targetChannelId) {
+            lastSyncedChannelRef.current = targetChannelId;
+            onChange(value, targetChannelId);
+        }
     }, [channelId, currentOption?.channelId, onChange, value]);
 
     useEffect(() => {

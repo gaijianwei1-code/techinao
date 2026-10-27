@@ -35,10 +35,10 @@ async function proxy(request: NextRequest, context: RouteContext) {
         const response = await fetch(target, {
             method: request.method,
             headers: proxyHeaders(request),
-            body: hasBody ? request.body : undefined,
-            duplex: hasBody ? "half" : undefined,
+            // dev 模式下流式 body（request.body + duplex）转发会失败，改为读完整 buffer 再转发。
+            body: hasBody ? await request.arrayBuffer() : undefined,
             redirect: "manual",
-        } as RequestInit & { duplex?: "half" });
+        } as RequestInit);
 
         return new Response(response.body, {
             status: response.status,
