@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>生图工作台改版预览 · 左侧抽屉 + 半科技风</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    overflow: hidden;
+    transition: color .3s;
+  }
+  body.dark { color: #e2e8f0; }
+  body.light { color: #1e293b; }
+
+  /* ===== 半科技风背景 ===== */
+  .bg-layer { position: fixed; inset: 0; pointer-events: none; }
+  .bg-gradient { position: absolute; inset: 0; transition: background 1s; }
+  body.dark  .bg-gradient { background: linear-gradient(165deg, #04070f 0%, #081020 48%, #0a1428 100%); }
+  body.light .bg-gradient { background: linear-gradient(165deg, #eef4fb 0%, #e3ecf7 52%, #dbe7f5 100%); }
+  .bg-grid {
+    position: absolute; inset: 0;
+    background-size: 44px 44px;
+    -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 40%, black 30%, transparent 100%);
+            mask-image: radial-gradient(ellipse 90% 80% at 50% 40%, black 30%, transparent 100%);
+    transition: background-image 1s;
+  }
+  body.dark  .bg-grid { background-image: linear-gradient(rgba(56,189,248,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,.07) 1px, transparent 1px); }
+  body.light .bg-grid { background-image: linear-gradient(rgba(59,130,246,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,.07) 1px, transparent 1px); }
+  .bg-glow { position: absolute; inset: 0; transition: background 1s; }
+  body.dark  .bg-glow { background:
+    radial-gradient(ellipse 40% 34% at 12% 8%,  rgba(34,211,238,.16), transparent 70%),
+    radial-gradient(ellipse 46% 38% at 88% 90%, rgba(59,130,246,.15), transparent 70%),
+    radial-gradient(ellipse 30% 24% at 78% 12%, rgba(168,85,247,.08), transparent 70%); }
+  body.light .bg-glow { background:
+    radial-gradient(ellipse 40% 34% at 12% 8%,  rgba(34,211,238,.22), transparent 70%),
+    radial-gradient(ellipse 46% 38% at 88% 90%, rgba(59,130,246,.16), transparent 70%); }
+
+  /* ===== 顶部导航（模拟） ===== */
+  .topnav {
+    position: fixed; top: 0; left: 0; right: 0; height: 52px; z-index: 30;
+    display: flex; align-items: center; gap: 18px; padding: 0 20px;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    transition: background .3s, border-color .3s;
+  }
+  body.dark  .topnav { background: rgba(4,7,15,.55); border-bottom: 1px solid rgba(56,189,248,.12); }
+  body.light .topnav { background: rgba(255,255,255,.55); border-bottom: 1px solid rgba(59,130,246,.14); }
+  .topnav .logo { font-weight: 700; font-size: 14px; letter-spacing: .5px; }
+  body.dark .topnav .logo { color: #7dd3fc; } body.light .topnav .logo { color: #0369a1; }
+  .topnav .links { display: flex; gap: 4px; font-size: 13px; }
+  .topnav .links a { padding: 6px 12px; border-radius: 8px; text-decoration: none; transition: background .2s; }
+  body.dark  .topnav .links a { color: #94a3b8; } body.light .topnav .links a { color: #475569; }
+  body.dark  .topnav .links a:hover, body.dark .topnav .links a.active { background: rgba(56,189,248,.10); color: #7dd3fc; }
+  body.light .topnav .links a:hover, body.light .topnav .links a.active { background: rgba(59,130,246,.10); color: #0369a1; }
+  .theme-toggle {
+    margin-left: auto; cursor: pointer; border: none; font-size: 12px; padding: 6px 14px; border-radius: 999px;
+    transition: all .2s;
+  }
+  body.dark  .theme-toggle { background: rgba(56,189,248,.12); color: #7dd3fc; border: 1px solid rgba(56,189,248,.3); }
+  body.light .theme-toggle { background: rgba(59,130,246,.10); color: #0369a1; border: 1px solid rgba(59,130,246,.3); }
+
+  /* ===== 结果区 ===== */
+  .results {
+    position: absolute; inset: 52px 0 0 0; z-index: 10;
+    overflow-y: auto; padding: 20px 24px 220px;
+  }
+  .results-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font-size: 13px; opacity: .75; }
+  .results-head .pill { padding: 3px 10px; border-radius: 999px; font-size: 11px; }
+  body.dark  .results-head .pill { background: rgba(56,189,248,.10); color: #7dd3fc; }
+  body.light .results-head .pill { background: rgba(59,130,246,.10); color: #0369a1; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+  .card {
+    aspect-ratio: 1/1.1; border-radius: 16px; overflow: hidden; position: relative;
+    backdrop-filter: blur(8px);
+    transition: transform .25s, box-shadow .25s;
+  }
+  body.dark  .card { background: rgba(10,20,40,.5); border: 1px solid rgba(56,189,248,.14); }
+  body.light .card { background: rgba(255,255,255,.6); border: 1px solid rgba(59,130,246,.16); }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 18px 44px rgba(14,165,233,.25); }
+  .card .art { position: absolute; inset: 0 0 34px 0; }
+  .card:nth-child(1)  .art { background: linear-gradient(135deg,#0ea5e9,#6366f1 60%,#a855f7); }
+  .card:nth-child(2)  .art { background: linear-gradient(135deg,#22d3ee,#0ea5e9 55%,#1e3a8a); }
+  .card:nth-child(3)  .art { background: linear-gradient(135deg,#818cf8,#c084fc 55%,#f0abfc); }
+  .card:nth-child(4)  .art { background: linear-gradient(135deg,#38bdf8,#2dd4bf 60%,#14532d); }
+  .card:nth-child(5)  .art { background: linear-gradient(135deg,#f472b6,#818cf8 60%,#0ea5e9); }
+  .card:nth-child(6)  .art { background: linear-gradient(135deg,#0ea5e9,#0f766e 60%,#052e16); }
+  .card:nth-child(7)  .art { background: linear-gradient(135deg,#a78bfa,#38bdf8 55%,#164e63); }
+  .card:nth-child(8)  .art { background: linear-gradient(135deg,#2dd4bf,#0ea5e9 50%,#312e81); }
+  .card .art::after {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(ellipse 60% 40% at 30% 25%, rgba(255,255,255,.35), transparent 60%);
+  }
+  .card .meta {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 34px;
+    display: flex; align-items: center; padding: 0 10px; font-size: 11px; gap: 8px;
+  }
+  body.dark  .card .meta { background: rgba(4,7,15,.72); color: #94a3b8; }
+  body.light .card .meta { background: rgba(255,255,255,.8); color: #64748b; }
+  .card .meta b { font-weight: 600; }
+  body.dark .card .meta b { color: #e2e8f0; } body.light .card .meta b { color: #1e293b; }
+
+  /* ===== 左侧工具抽屉 ===== */
+  .drawer-handle {
+    position: fixed; left: 0; top: 50%; transform: translateY(-50%); z-index: 40;
+    width: 28px; height: 64px; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 0 12px 12px 0;
+    transition: width .2s, background .3s;
+    font-size: 14px;
+  }
+  .drawer-handle:hover { width: 32px; }
+  body.dark  .drawer-handle { background: rgba(8,16,32,.6); color: #7dd3fc; border: 1px solid rgba(56,189,248,.25); border-left: none; backdrop-filter: blur(14px); box-shadow: 0 10px 30px rgba(14,165,233,.2); }
+  body.light .drawer-handle { background: rgba(255,255,255,.6); color: #0369a1; border: 1px solid rgba(59,130,246,.3); border-left: none; backdrop-filter: blur(14px); box-shadow: 0 10px 30px rgba(14,165,233,.2); }
+
+  .drawer {
+    position: fixed; left: 12px; top: 50%; transform: translateY(-50%); z-index: 40;
+    width: 178px; padding: 10px; border-radius: 18px;
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    animation: pop .22s ease;
+    transition: background .3s, border-color .3s;
+  }
+  @keyframes pop { from { opacity: 0; transform: translateY(-50%) translateX(-10px); } to { opacity: 1; transform: translateY(-50%) translateX(0); } }
+  body.dark  .drawer { background: rgba(8,16,32,.72); border: 1px solid rgba(56,189,248,.2); box-shadow: 0 26px 80px rgba(2,6,23,.6); }
+  body.light .drawer { background: rgba(255,255,255,.72); border: 1px solid rgba(59,130,246,.22); box-shadow: 0 24px 70px rgba(14,165,233,.22); }
+  .group-title { font-size: 10px; font-weight: 700; letter-spacing: 2px; padding: 0 4px 5px; text-transform: uppercase; }
+  body.dark .group-title { color: rgba(125,211,252,.6); } body.light .group-title { color: rgba(3,105,161,.6); }
+  .group + .group { margin-top: 8px; padding-top: 8px; }
+  body.dark  .group + .group { border-top: 1px solid rgba(255,255,255,.08); }
+  body.light .group + .group { border-top: 1px solid rgba(15,23,42,.08); }
+  .drawer-item {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    border: none; background: transparent; cursor: pointer;
+    padding: 7px 8px; border-radius: 9px; font-size: 13px; text-align: left;
+    transition: background .15s, color .15s; color: inherit;
+  }
+  .drawer-item:hover:enabled { }
+  body.dark  .drawer-item:hover:enabled { background: rgba(56,189,248,.10); color: #7dd3fc; }
+  body.light .drawer-item:hover:enabled { background: rgba(59,130,246,.10); color: #0369a1; }
+  .drawer-item:disabled { opacity: .38; cursor: not-allowed; }
+  .drawer-item .ic { width: 15px; height: 15px; flex-shrink: 0; opacity: .85; }
+  .drawer-item .badge {
+    margin-left: auto; font-size: 10px; padding: 1px 7px; border-radius: 999px;
+  }
+  body.dark .drawer-item .badge { background: rgba(56,189,248,.16); color: #7dd3fc; }
+  body.light .drawer-item .badge { background: rgba(59,130,246,.14); color: #0369a1; }
+  .drawer-collapse {
+    margin-top: 8px; width: 100%; border: none; cursor: pointer;
+    padding: 5px 0; border-radius: 8px; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 4px;
+    transition: background .15s;
+  }
+  body.dark  .drawer-collapse { border: 1px solid rgba(255,255,255,.1); color: #94a3b8; background: transparent; }
+  body.light .drawer-collapse { border: 1px solid rgba(15,23,42,.1); color: #64748b; background: transparent; }
+  body.dark  .drawer-collapse:hover { background: rgba(255,255,255,.05); }
+  body.light .drawer-collapse:hover { background: rgba(15,23,42,.05); }
+
+  /* ===== 底部工作台 ===== */
+  .workbench {
+    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 40;
+    width: min(960px, calc(100vw - 48px)); border-radius: 24px; padding: 16px;
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    transition: background .3s, border-color .3s;
+  }
+  body.dark  .workbench { background: rgba(8,16,32,.66); border: 1px solid rgba(56,189,248,.16); box-shadow: 0 34px 110px rgba(0,0,0,.58), 0 0 60px rgba(14,165,233,.08); }
+  body.light .workbench { background: rgba(255,255,255,.68); border: 1px solid rgba(255,255,255,.5); box-shadow: 0 32px 100px rgba(15,23,42,.22); }
+  .wb-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start; }
+  textarea {
+    width: 100%; min-height: 64px; resize: none; border-radius: 14px; padding: 12px 14px;
+    font: inherit; font-size: 14px; outline: none; transition: all .3s;
+  }
+  body.dark  textarea { background: rgba(2,6,16,.5); border: 1px solid rgba(56,189,248,.18); color: #e2e8f0; }
+  body.light textarea { background: rgba(255,255,255,.85); border: 1px solid rgba(59,130,246,.2); color: #1e293b; }
+  textarea:focus { border-color: rgba(14,165,233,.6); box-shadow: 0 0 0 3px rgba(14,165,233,.15); }
+  .wb-actions { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+  .btn {
+    border: none; cursor: pointer; border-radius: 12px; font: inherit; font-size: 13px;
+    padding: 0 16px; height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    white-space: nowrap; transition: all .2s;
+  }
+  .btn-primary {
+    color: #fff; background: linear-gradient(135deg, #0ea5e9, #6366f1);
+    box-shadow: 0 8px 24px rgba(14,165,233,.4); font-weight: 600;
+  }
+  .btn-primary:hover { filter: brightness(1.1); box-shadow: 0 10px 30px rgba(14,165,233,.5); }
+  .btn-ghost { background: transparent; }
+  body.dark  .btn-ghost { color: #94a3b8; border: 1px solid rgba(56,189,248,.2); }
+  body.light .btn-ghost { color: #64748b; border: 1px solid rgba(59,130,246,.2); }
+  .params { display: grid; grid-template-columns: 1.3fr 1.1fr .9fr .9fr .9fr .9fr auto; gap: 8px; margin-top: 10px; }
+  .param label { display: block; font-size: 11px; margin-bottom: 4px; opacity: .6; }
+  .param .box {
+    height: 40px; border-radius: 11px; display: flex; align-items: center; padding: 0 10px; font-size: 13px;
+    transition: all .3s; cursor: pointer; justify-content: space-between;
+  }
+  body.dark  .param .box { background: rgba(2,6,16,.45); border: 1px solid rgba(56,189,248,.16); }
+  body.light .param .box { background: rgba(255,255,255,.85); border: 1px solid rgba(59,130,246,.16); }
+  .param .box::after { content: "▾"; font-size: 10px; opacity: .5; }
+  .refs { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+  .ref-thumb {
+    width: 44px; height: 44px; border-radius: 10px; position: relative; overflow: hidden;
+  }
+  .ref-thumb:nth-child(1) { background: linear-gradient(135deg,#22d3ee,#6366f1); }
+  .ref-thumb:nth-child(2) { background: linear-gradient(135deg,#f472b6,#8b5cf6); }
+  .ref-add {
+    width: 44px; height: 44px; border-radius: 10px; border: 1px dashed;
+    display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; opacity: .55;
+  }
+  body.dark  .ref-add { border-color: rgba(56,189,248,.3); }
+  body.light .ref-add { border-color: rgba(59,130,246,.35); }
+  .refs .hint { font-size: 11px; opacity: .5; margin-left: 4px; }
+
+  .note {
+    position: fixed; right: 18px; top: 62px; z-index: 40; font-size: 12px; line-height: 1.9;
+    padding: 12px 16px; border-radius: 14px; max-width: 240px;
+    backdrop-filter: blur(12px);
+  }
+  body.dark  .note { background: rgba(8,16,32,.6); border: 1px solid rgba(56,189,248,.18); color: #94a3b8; }
+  body.light .note { background: rgba(255,255,255,.65); border: 1px solid rgba(59,130,246,.18); color: #475569; }
+  .note b { display: block; margin-bottom: 4px; }
+  body.dark .note b { color: #7dd3fc; } body.light .note b { color: #0369a1; }
+</style>
+</head>
+<body class="dark">
+
+<div class="bg-layer">
+  <div class="bg-gradient"></div>
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+</div>
+
+<nav class="topnav">
+  <span class="logo">◈ AI 工作台</span>
+  <div class="links">
+    <a class="active" href="javascript:void(0)">生图工作台</a>
+    <a href="javascript:void(0)">视频创作台</a>
+    <a href="javascript:void(0)">提示词中心</a>
+    <a href="javascript:void(0)">我的素材</a>
+  </div>
+  <button class="theme-toggle" onclick="toggleTheme()">☀ 切换浅色 / 🌙 切换深色</button>
+</nav>
+
+<section class="results">
+  <div class="results-head">
+    <span class="pill">生成结果 · 8</span>
+    <span class="pill">会话：赛博城市系列</span>
+  </div>
+  <div class="grid" id="cardGrid"></div>
+</section>
+
+<button class="drawer-handle" id="handle" onclick="openDrawer()" title="展开工具抽屉">›</button>
+
+<div class="drawer" id="drawer" style="display:none">
+  <div class="group">
+    <div class="group-title">提示词</div>
+    <button class="drawer-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 8 6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/></svg>中→英润色</button>
+    <button class="drawer-item" disabled><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>还原润色</button>
+    <button class="drawer-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>清空提示词</button>
+    <button class="drawer-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>提示词库</button>
+  </div>
+  <div class="group">
+    <div class="group-title">参考图</div>
+    <button class="drawer-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>上传参考图<span class="badge">2</span></button>
+    <button class="drawer-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>读取剪贴板</button>
+    <button class="drawer-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 19V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14M9 21v-4h6v4M3 19h18"/></svg>我的素材</button>
+  </div>
+  <div class="group">
+    <div class="group-title">设置</div>
+    <button class="drawer-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><circle cx="4" cy="12" r="2"/><circle cx="12" cy="10" r="2"/><circle cx="20" cy="14" r="2"/></svg>参数配置</button>
+    <button class="drawer-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>侧边工作台</button>
+  </div>
+  <button class="drawer-collapse" onclick="closeDrawer()">‹ 收起</button>
+</div>
+
+<div class="workbench">
+  <div class="wb-row">
+    <textarea placeholder="描述你想生成的图片，可输入 @ 来指定参考图...">霓虹雨夜的赛博朋克街道，高耸的全息广告牌，湿润路面反射着青色与品红的光，电影感构图，超广角</textarea>
+    <div class="wb-actions">
+      <button class="btn btn-primary">✦ 开始创作 <span style="opacity:.8">· 消耗 2 算力</span></button>
+    </div>
+  </div>
+  <div class="params">
+    <div class="param"><label>模型</label><div class="box">gpt-image-2</div></div>
+    <div class="param"><label>接口模式</label><div class="box">images</div></div>
+    <div class="param"><label>尺寸</label><div class="box">2048×2048</div></div>
+    <div class="param"><label>质量</label><div class="box">高</div></div>
+    <div class="param"><label>数量</label><div class="box">1</div></div>
+    <div class="param"><label>参考图</label><div class="box">上传 / 选择</div></div>
+    <div class="param" style="display:flex;align-items:flex-end"><div class="btn btn-ghost" style="height:40px">完整设置</div></div>
+  </div>
+  <div class="refs">
+    <div class="ref-thumb"></div>
+    <div class="ref-thumb"></div>
+    <div class="ref-add">+</div>
+    <span class="hint">参考图 2 张</span>
+  </div>
+</div>
+
+<div class="note">
+  <b>改版预览说明</b>
+  ① 左侧细把手 → 点击展开工具抽屉<br>
+  ② 底部只留输入 + 生成 + 参数<br>
+  ③ 半科技风：渐变 + 网格 + 光晕<br>
+  ④ 右上角可切换深 / 浅主题
+</div>
+
+<script>
+  const grid = document.getElementById("cardGrid");
+  const names = ["雨夜街道", "全息广告", "轨道城市", "森林基地", "霓虹少女", "深海都市", "浮空岛", "隧道尽头"];
+  grid.innerHTML = names.map((n, i) => `
+    <div class="card"><div class="art"></div>
+      <div class="meta"><b>${n}</b><span style="margin-left:auto">#${String(i + 1).padStart(2, "0")}</span></div>
+    </div>`).join("");
+
+  function openDrawer() {
+    document.getElementById("drawer").style.display = "block";
+    document.getElementById("handle").style.display = "none";
+  }
+  function closeDrawer() {
+    document.getElementById("drawer").style.display = "none";
+    document.getElementById("handle").style.display = "flex";
+  }
+  function toggleTheme() {
+    document.body.classList.toggle("dark");
+    document.body.classList.toggle("light");
+  }
+</script>
+</body>
+</html>
