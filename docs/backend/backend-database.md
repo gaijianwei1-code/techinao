@@ -316,6 +316,32 @@ S3/R2 与 WebDAV 共用的媒体文件索引表，不保存画布、素材列表
 索引：`idx_canvas_projects_user_deleted_updated (user_id, deleted_at, updated_at)`、`idx_canvas_projects_deleted_at (deleted_at)`
 
 
+### showcase_works
+
+创作精选作品表。用户把画布项目发布到精选时复制一份完整项目 JSON，媒体不重复上传（节点里的 `/api/files/:id/content` 本身公开可访问）；列表接口不返回 `project_data` 大字段，详情接口才返回。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | string | 主键，`showcase_` 前缀 |
+| `user_id` | string | 发布者用户 ID |
+| `project_id` | string | 来源画布项目 ID |
+| `title` | string | 作品标题 |
+| `description` | string | 作品简介，可为空 |
+| `category` | string | 分类：`精选画布`、`专业影视`、`短剧漫剧`、`动漫游戏`、`教育生活` |
+| `cover` | string | 封面地址（图片 URL 或视频 URL，前端按扩展名渲染） |
+| `preview` | string | 预览视频地址，可为空 |
+| `author_name` | string | 发布时快照的作者昵称 |
+| `author_avatar` | string | 发布时快照的作者头像 |
+| `project_data` | text | 完整 `CanvasProject` JSON，仅详情接口返回 |
+| `likes` | number | 点赞数 |
+| `liked_user_ids` | json | 点赞用户 ID 数组，用于点赞去重 |
+| `status` | string | `published` 上架、`hidden` 下架（下架后列表不展示，详情仅发布者可见） |
+| `created_at` | string | 发布时间，列表按此倒序 |
+| `updated_at` | string | 更新时间 |
+
+接口：`GET /api/showcase`（公开列表，登录后附带 `liked`）、`GET /api/showcase/:id`（公开详情）、`POST /api/v1/showcase`（发布，需登录）、`POST /api/v1/showcase/:id/like`（点赞/取消）、`POST /api/v1/showcase/:id/fork`（复制到自己画布）、`GET /api/admin/showcase`、`POST /api/admin/showcase/status`（批量上下架）、`DELETE /api/admin/showcase/:id`。
+
+
 ### settings
 
 系统配置表。`public` 放前端可读取的公开配置，`private` 放仅后端和管理员可读取的私有配置；`agent-skills-initialized` 是默认 Skill 首次初始化标记，避免管理员删除后被启动流程重新创建。配置值都用 JSON。

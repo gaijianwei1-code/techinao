@@ -1,17 +1,20 @@
-import { Check, Download, Pencil, Trash2, X } from "lucide-react";
+import { Check, Download, Pencil, Share2, Trash2, X } from "lucide-react";
 import { useNavigate, useSearchParams } from "@/lib/router-shim";
 import { Button, Input } from "antd";
 import { useTranslation } from "react-i18next";
+import { useState } from "react";
 
 import { useCanvasStore, type CanvasProject } from "@/stores/canvas/use-canvas-store";
 import { useCanvasUiStore } from "@/stores/canvas/use-canvas-ui-store";
 import { exportCanvasProjects } from "@/lib/canvas/canvas-export";
 import { hasAgentUrlBootstrap } from "@/lib/agent/agent-url-bootstrap";
+import { CanvasPublishModal } from "@/components/canvas/canvas-publish-modal";
 
 export function CanvasProjectCard({ project }: { project: CanvasProject }) {
     const { i18n, t } = useTranslation();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const [publishOpen, setPublishOpen] = useState(false);
     const renameProject = useCanvasStore((state) => state.renameProject);
     const selectedIds = useCanvasUiStore((state) => state.selectedProjectIds);
     const editingId = useCanvasUiStore((state) => state.editingProjectId);
@@ -71,6 +74,7 @@ export function CanvasProjectCard({ project }: { project: CanvasProject }) {
                         </>
                     ) : (
                         <>
+                            <Button type="text" size="small" shape="circle" icon={<Share2 className="size-4" />} onClick={() => setPublishOpen(true)} aria-label="发布到创作精选" title="发布到创作精选" />
                             <Button type="text" size="small" shape="circle" icon={<Download className="size-4" />} onClick={() => void exportCanvasProjects([project], project.title || t("canvas.title"))} aria-label={t("canvas.project.export")} />
                             <Button type="text" size="small" shape="circle" icon={<Pencil className="size-4" />} onClick={() => startEditing(project.id, project.title)} aria-label={t("canvas.project.rename")} />
                             <Button type="text" size="small" shape="circle" icon={<Trash2 className="size-4" />} onClick={() => setDeleteIds([project.id])} aria-label={t("canvas.project.delete")} />
@@ -78,6 +82,7 @@ export function CanvasProjectCard({ project }: { project: CanvasProject }) {
                     )}
                 </div>
             </div>
+            <CanvasPublishModal project={publishOpen ? project : null} onClose={() => setPublishOpen(false)} />
         </article>
     );
 }

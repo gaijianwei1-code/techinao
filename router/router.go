@@ -99,6 +99,13 @@ func New() *gin.Engine {
 	v1.POST("/canvas/projects", gin.WrapF(handler.SaveUserCanvasProject))
 	v1.POST("/canvas/projects/sync", gin.WrapF(handler.SyncUserCanvasProjects))
 	v1.POST("/canvas/projects/delete", gin.WrapF(handler.DeleteUserCanvasProjects))
+	v1.POST("/showcase", gin.WrapF(handler.PublishShowcaseWork))
+	v1.POST("/showcase/:id/like", func(c *gin.Context) {
+		handler.LikeShowcaseWork(c.Writer, c.Request, c.Param("id"))
+	})
+	v1.POST("/showcase/:id/fork", func(c *gin.Context) {
+		handler.ForkShowcaseWork(c.Writer, c.Request, c.Param("id"))
+	})
 	v1.GET("/user-data/image-history", gin.WrapF(handler.UserImageHistory))
 	v1.POST("/user-data/image-history", gin.WrapF(handler.SaveUserImageHistory))
 	v1.GET("/generation-logs/videos", gin.WrapF(handler.UserVideoGenerationLogs))
@@ -125,6 +132,10 @@ func New() *gin.Engine {
 		handler.AgentSkillFile(c.Writer, c.Request, c.Param("id"))
 	})
 	api.GET("/assets", middleware.OptionalAuth, gin.WrapF(handler.Assets))
+	api.GET("/showcase", middleware.OptionalAuth, gin.WrapF(handler.ShowcaseWorks))
+	api.GET("/showcase/:id", middleware.OptionalAuth, func(c *gin.Context) {
+		handler.ShowcaseWorkDetail(c.Writer, c.Request, c.Param("id"))
+	})
 	api.POST("/admin/login", gin.WrapF(handler.AdminLogin))
 
 	admin := api.Group("/admin", middleware.AdminAuth)
@@ -166,6 +177,11 @@ func New() *gin.Engine {
 		handler.AdminDeleteAgentSkill(c.Writer, c.Request, c.Param("id"))
 	})
 	admin.GET("/assets", gin.WrapF(handler.AdminAssets))
+	admin.GET("/showcase", gin.WrapF(handler.AdminShowcaseWorks))
+	admin.POST("/showcase/status", gin.WrapF(handler.AdminSetShowcaseStatus))
+	admin.DELETE("/showcase/:id", func(c *gin.Context) {
+		handler.AdminDeleteShowcaseWork(c.Writer, c.Request, c.Param("id"))
+	})
 	admin.POST("/assets", gin.WrapF(handler.AdminSaveAsset))
 	admin.DELETE("/assets/:id", func(c *gin.Context) {
 		handler.AdminDeleteAsset(c.Writer, c.Request, c.Param("id"))

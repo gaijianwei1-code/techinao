@@ -18,22 +18,16 @@ SRC = ROOT / "web" / "src"
 # 开关：patches/.video-enabled 存在时保留「视频创作台」（由 patches/video-feature.py on|off 维护）
 VIDEO_ENABLED = (Path(__file__).resolve().parent / ".video-enabled").exists()
 
+# 画布现在是产品核心功能（已完整移植），不再参与剪枝；本脚本只保留视频开关与广告轮播清理。
 # 要整体删除的路由目录
-ROUTE_DIRS = [
-    SRC / "app/(user)/canvas/[id]",
-    SRC / "app/(user)/canvas/agent",
-]
+ROUTE_DIRS = []
 if not VIDEO_ENABLED:
-    ROUTE_DIRS.insert(0, SRC / "app/(user)/video")
+    ROUTE_DIRS.append(SRC / "app/(user)/video")
 ROUTE_FILES = [
-    SRC / "app/(user)/canvas/page.tsx",
-    SRC / "app/(user)/canvas/layout.tsx",
-    SRC / "app/(user)/canvas/loading.tsx",
-    SRC / "app/(user)/canvas/error.tsx",
     SRC / "app/(user)/home-banner-carousel.tsx",   # 首页广告轮播，一起移除
 ]
 # 允许评估删除的目录（只在这里面删，别的目录一律不动）
-CANDIDATE_DIRS = [SRC / "app/(user)/canvas"] + ([] if VIDEO_ENABLED else [SRC / "app/(user)/video"])
+CANDIDATE_DIRS = [] if VIDEO_ENABLED else [SRC / "app/(user)/video"]
 
 EXTS = [".tsx", ".ts", ".jsx", ".js", ".mjs", ".css"]
 IMPORT_RE = re.compile(
@@ -94,12 +88,10 @@ def main():
                     out.append(target)
         specs[f] = out
 
-    # 入口：所有路由/布局/中间件，排除已删的 canvas 路由（video 视开关而定）
+    # 入口：所有路由/布局/中间件（canvas 已是核心功能，同样作为入口参与可达性分析）
     roots = []
     for f in files:
         rel = str(f)
-        if rel.startswith(str(SRC / "app/(user)/canvas")):
-            continue
         if not VIDEO_ENABLED and rel.startswith(str(SRC / "app/(user)/video")):
             continue
         name = f.name

@@ -46,11 +46,8 @@ ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 ENV PROMPT_DATA_DIR=/app/data/prompts
-# 本地补丁：Debian 源换国内镜像，否则 deb.debian.org 拉 Packages 卡到超时。
-RUN for f in /etc/apt/sources.list.d/debian.sources /etc/apt/sources.list; do \
-      [ -f "$f" ] && sed -i 's|deb.debian.org|mirrors.aliyun.com|g; s|security.debian.org|mirrors.aliyun.com|g' "$f" || true; \
-    done; \
-    apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+# 本地补丁：CA 证书直接取自 api-build 阶段，避免运行 apt 依赖国内镜像源稳定性。
+COPY --from=api-build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 RUN mkdir -p /app/data/prompts
 
 EXPOSE 3000

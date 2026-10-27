@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, FileText, FolderOpen, ImagePlus, Images, Workflow, Video } from "lucide-react";
+import { ArrowUpRight, FileText, FolderOpen, ImagePlus, Images, LayoutGrid, Sparkles, Workflow, Video } from "lucide-react";
 
 type Entry = {
     href: string;
@@ -9,8 +9,10 @@ type Entry = {
 };
 
 const entries: Entry[] = [
+    { href: "/canvas", title: "无限画布", desc: "节点式画布：生成、编辑、连线编排，多项目管理", icon: LayoutGrid },
     { href: "/image", title: "生图工作台", desc: "写提示词、带参考图，直接出图", icon: ImagePlus },
     { href: "/video", title: "视频创作台", desc: "文生视频 / 图生视频，带首尾帧与运镜设置", icon: Video },
+    { href: "/showcase", title: "创作精选", desc: "浏览大家的画布作品，看成片、看创作过程", icon: Sparkles },
     { href: "/prompts", title: "提示词中心", desc: "浏览、收藏、复用提示词", icon: FileText },
     { href: "/assets", title: "我的素材", desc: "图片 / 视频 / 文本素材统一存放", icon: Images },
     { href: "/asset-library", title: "素材库", desc: "跨项目浏览与整理素材", icon: FolderOpen },

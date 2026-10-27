@@ -53,7 +53,7 @@ elif DOCKERFILE_TARGET in s:
 else:
     print("!! Dockerfile 结构与预期不同，请手动确认 GOPROXY 设置")
 
-# ---------- 1b. Dockerfile 运行时 stage 的 apt 源换国内镜像 ----------
+# ---------- 1b. 运行镜像 CA 证书：直接复制 api-build 的证书包，不再跑 apt ----------
 APT_OLD = "RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*"
 APT_NEW = (
     "# 本地补丁：Debian 源换国内镜像，否则 deb.debian.org 拉 Packages 卡到超时。\n"
@@ -62,14 +62,21 @@ APT_NEW = (
     "    done; \\\n"
     "    apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*"
 )
+CERT_PATCH = (
+    "# 本地补丁：CA 证书直接取自 api-build 阶段，避免运行 apt 依赖国内镜像源稳定性。\n"
+    "COPY --from=api-build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt"
+)
 s = read("Dockerfile")
-if "mirrors.aliyun.com" in s:
-    fine("Dockerfile", "apt 源已是国内镜像")
+if "COPY --from=api-build /etc/ssl/certs/ca-certificates.crt" in s:
+    fine("Dockerfile", "CA 证书已从 api-build 复制")
+elif APT_NEW in s:
+    write("Dockerfile", s.replace(APT_NEW, CERT_PATCH, 1))
+    note("Dockerfile", "apt 安装 CA 证书改为复制 api-build 证书包")
 elif APT_OLD in s:
-    write("Dockerfile", s.replace(APT_OLD, APT_NEW, 1))
-    note("Dockerfile", "apt 源换 mirrors.aliyun.com")
+    write("Dockerfile", s.replace(APT_OLD, CERT_PATCH, 1))
+    note("Dockerfile", "安装 CA 证书改为复制 api-build 证书包")
 else:
-    print("!! Dockerfile 的 apt-get 行与预期不同，请手动确认 apt 源")
+    print("!! Dockerfile 的 CA 证书步骤与预期不同，请手动确认")
 
 # ---------- 1c. Dockerfile 的 bun install 走 npmmirror ----------
 BUN_OLD = "RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile --cache-dir=/root/.bun/install/cache"
